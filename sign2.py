@@ -4,6 +4,7 @@
 # In[ ]:
 
 import streamlit as st
+import google.generativeai as genai
 from inference_sdk import InferenceHTTPClient
 from PIL import Image, ImageDraw
 import io
@@ -20,8 +21,11 @@ CLIENT = InferenceHTTPClient(
     api_key="dvO9HlZOMA5WCA7NoXtQ"  # Your API key
 )
 
+# Initialize Google Generative AI with API key
+genai.configure(api_key="AIzaSyA-9-lTQTWdNM43YdOXMQwGKDy0SrMwo6c")
+
 # Streamlit app title
-st.title("Sign Language Detection")
+st.title("Sign Language Detection with Content Generation")
 
 # Confidence threshold (adjust as needed)
 confidence_threshold = st.slider("Confidence Threshold", 0.0, 1.0, 0.5, 0.01)
@@ -56,6 +60,7 @@ if uploaded_file is not None:
                 # Visualize predictions on the image
                 image_with_boxes = image.copy()
                 draw = ImageDraw.Draw(image_with_boxes)
+                detected_labels = []  # List to store detected labels for content generation
                 for prediction in result["predictions"]:
                     confidence = prediction["confidence"]
                     if confidence >= confidence_threshold:
@@ -64,6 +69,7 @@ if uploaded_file is not None:
                         width = prediction["width"]
                         height = prediction["height"]
                         label = prediction["class"]
+                        detected_labels.append(label)  # Add detected label to list
 
                         # Draw bounding box and label
                         draw.rectangle(
@@ -73,7 +79,21 @@ if uploaded_file is not None:
                         )
                         draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
 
+                # Show the image with bounding boxes and labels
                 st.image(image_with_boxes, caption='Detected Gestures.', use_container_width=True)
+
+                # Generate content based on the detected gestures using Google Generative AI
+                if detected_labels:
+                    # Combine detected labels into a prompt for Generative AI
+                    prompt = f"The following sign language gestures were detected: {', '.join(detected_labels)}. Can you describe their meanings or provide more context about these gestures?"
+                    try:
+                        # Generate content with Google Generative AI
+                        response = genai.generate_text(prompt)
+                        st.write("Generated Content Based on Detected Gestures:")
+                        st.write(response["text"])
+                    except Exception as e:
+                        st.error(f"Error generating content: {e}")
         except Exception as e:
             st.error(f"Error during inference: {e}")
+
 
