@@ -82,17 +82,51 @@ if uploaded_file is not None:
                 # Show the image with bounding boxes and labels
                 st.image(image_with_boxes, caption='Detected Gestures.', use_container_width=True)
 
-                # Generate content based on the detected gestures using Google Generative AI
+                # Define sign language knowledge base
+                sign_language_knowledge = {
+                    "A": "The letter 'A' in American Sign Language (ASL) is formed by making a fist with your dominant hand, extending your thumb to the side, and pointing your hand forward.",
+                    "B": "The letter 'B' in ASL is formed by extending all four fingers of your dominant hand upward, keeping them together, and then slightly bending your thumb.",
+                    "C": "The letter 'C' in ASL is formed by curving your dominant hand into a 'C' shape, with your thumb tucked under your fingers.",
+                    "D": "The letter 'D' in ASL is formed by extending your index finger and thumb to form a 'D' shape, with the other fingers closed.",
+                    "E": "The letter 'E' in ASL is formed by extending your index finger straight out.",
+                    "F": "The letter 'F' in ASL is formed by extending your index finger and middle finger straight out, with the other fingers closed.",
+                    "G": "The letter 'G' in ASL is formed by making a fist with your dominant hand and extending your thumb straight up.",
+                    "H": "The letter 'H' in ASL is formed by holding your dominant hand flat with your fingers spread apart.",
+                    "I": "The letter 'I' in ASL is formed by extending your index finger straight up.",
+                    "J": "The letter 'J' in ASL is formed by hooking your index finger.",
+                    "K": "The letter 'K' in ASL is formed by making a fist with your dominant hand and extending your index finger and middle finger straight out.",
+                    "L": "The letter 'L' in ASL is formed by extending your index finger and thumb to form an 'L' shape.",
+                    "M": "The letter 'M' in ASL is formed by extending your index finger and middle finger straight out, with the other fingers closed, and then touching your thumb to your middle finger.",
+                    "N": "The letter 'N' in ASL is formed by extending your index finger and middle finger straight out, with the other fingers closed.",
+                    "O": "The letter 'O' in ASL is formed by making a circle with your thumb and index finger.",
+                    "P": "The letter 'P' in ASL is formed by making a fist with your dominant hand and extending your thumb and index finger straight out.",
+                    "Q": "The letter 'Q' in ASL is formed by making a fist with your dominant hand and extending your thumb and index finger straight out, then twisting your wrist slightly to the right.",
+                    "R": "The letter 'R' in ASL is formed by making a fist with your dominant hand and extending your index finger straight out, then curving it slightly downward.",
+                    "S": "The letter 'S' in ASL is formed by making a fist with your dominant hand and extending your little finger and ring finger straight out.",
+                    "T": "The letter 'T' in ASL is formed by extending your hand flat with your palm facing inward and then tapping your middle finger on your thumb.",
+                    "U": "The letter 'U' in ASL is formed by making a circle with your thumb and index finger, then closing your other fingers over them.",
+                    "V": "The letter 'V' in ASL is formed by extending your index and middle fingers straight out, with the other fingers closed, forming a "V" shape.",
+                    "W": "The letter 'W' in ASL is formed by extending your index finger, middle finger, and ring finger straight out, with the other fingers closed, forming a "W" shape.",
+                    "X": "The letter 'X' in ASL is formed by crossing your index fingers in an "X" shape.",
+                    "Y": "The letter 'Y' in ASL is formed by extending your index finger straight up and then curving it downward.",
+                    "Z": "The letter 'Z' in ASL is formed by making a fist with your dominant hand and extending your thumb and index finger straight out, then moving your hand in a circular motion.",
+                    # Add more gestures and descriptions as needed
+                }
+
+                # Generate content based on the detected gestures using Google Generative AI and knowledge base
                 if detected_labels:
-                    # Combine detected labels into a prompt for Generative AI
-                    prompt = f"The following sign language gestures were detected: {', '.join(detected_labels)}. Can you describe their meanings or provide more context about these gestures?"
-                    try:
-                        # Generate content with Google Generative AI
-                        model = genai.GenerativeModel("gemini-1.5-flash")  # Use a specific Gemini model
-                        response = model.generate_content(prompt)
+                    response_parts = []
+                    for label in detected_labels:
+                        if label in sign_language_knowledge:
+                            response_parts.append(f"The gesture '{label}' means: {sign_language_knowledge[label]}")
+                        else:
+                            response_parts.append(f"The gesture '{label}' is not found in the knowledge base. More information is needed to provide a specific interpretation. Sign language gestures are highly context-dependent and vary between different sign languages.")
+
+                    if response_parts:
                         st.write("Generated Content Based on Detected Gestures:")
-                        st.write(response.text)
-                    except Exception as e:
-                        st.error(f"Error generating content: {e}")
+                        st.write(" ".join(response_parts))
+                    else:
+                        st.write("No matching gestures found in the knowledge base.")
+
         except Exception as e:
             st.error(f"Error during inference: {e}")
