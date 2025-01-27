@@ -40,8 +40,9 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
             # Perform inference using the Roboflow API
             result = CLIENT.infer(tmp_file.name, model_id=self.model_id)
 
-        # Display the results (optional: draw bounding boxes on the frame)
+        # Display only the detection results (Bounding boxes and labels)
         if result and "predictions" in result:
+            detection_results = []
             for prediction in result["predictions"]:
                 confidence = prediction["confidence"]
                 if confidence >= self.confidence_threshold:  # Only process predictions with sufficient confidence
@@ -51,17 +52,24 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
                     height = prediction["height"]
                     label = prediction["class"]
 
-                    # Draw bounding box and label on the frame (optional)
-                    img = img.copy()
-                    img = img.convert("RGB")
-                    from PIL import ImageDraw
-                    draw = ImageDraw.Draw(img)
-                    draw.rectangle(
-                        [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
-                        outline="red",
-                        width=2,
-                    )
-                    draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
+                    # Append the results in a clean format
+                    detection_results.append({
+                        "Label": label,
+                        "Confidence": f"{confidence:.2f}",
+                        "Bounding Box": {
+                            "x": x,
+                            "y": y,
+                            "width": width,
+                            "height": height
+                        }
+                    })
+
+            # Display the detection results if any
+            if detection_results:
+                st.write("Detection Results:")
+                st.json(detection_results)
+            else:
+                st.write("No sign language gestures detected.")
 
         return img  # Return the processed frame
 
@@ -92,8 +100,32 @@ if option == "Upload Image":
                 if not result or "predictions" not in result or len(result["predictions"]) == 0:
                     st.write("No sign language gestures detected. Please upload a clearer image with visible gestures.")
                 else:
-                    st.write("Detection Results:")
-                    st.json(result)
+                    detection_results = []
+                    for prediction in result["predictions"]:
+                        confidence = prediction["confidence"]
+                        if confidence >= 0.3:  # Confidence threshold
+                            x = prediction["x"]
+                            y = prediction["y"]
+                            width = prediction["width"]
+                            height = prediction["height"]
+                            label = prediction["class"]
+                            
+                            detection_results.append({
+                                "Label": label,
+                                "Confidence": f"{confidence:.2f}",
+                                "Bounding Box": {
+                                    "x": x,
+                                    "y": y,
+                                    "width": width,
+                                    "height": height
+                                }
+                            })
+
+                    if detection_results:
+                        st.write("Detection Results:")
+                        st.json(detection_results)
+                    else:
+                        st.write("No sign language gestures detected.")
             except Exception as e:
                 st.error(f"Error during inference: {e}")
 
@@ -124,8 +156,32 @@ elif option == "Provide Image URL":
                     if not result or "predictions" not in result or len(result["predictions"]) == 0:
                         st.write("No sign language gestures detected. Please upload a clearer image with visible gestures.")
                     else:
-                        st.write("Detection Results:")
-                        st.json(result)
+                        detection_results = []
+                        for prediction in result["predictions"]:
+                            confidence = prediction["confidence"]
+                            if confidence >= 0.3:  # Confidence threshold
+                                x = prediction["x"]
+                                y = prediction["y"]
+                                width = prediction["width"]
+                                height = prediction["height"]
+                                label = prediction["class"]
+                                
+                                detection_results.append({
+                                    "Label": label,
+                                    "Confidence": f"{confidence:.2f}",
+                                    "Bounding Box": {
+                                        "x": x,
+                                        "y": y,
+                                        "width": width,
+                                        "height": height
+                                    }
+                                })
+
+                        if detection_results:
+                            st.write("Detection Results:")
+                            st.json(detection_results)
+                        else:
+                            st.write("No sign language gestures detected.")
                 except Exception as e:
                     st.error(f"Error during inference: {e}")
         except Exception as e:
@@ -141,7 +197,7 @@ elif option == "Use Webcam":
 
 # Add some additional information
 st.write("## How to Use")
-st.write("""
+st.write(""" 
 1. **Upload an Image**: Use the file uploader to upload an image from your device.
 2. **Provide Image URL**: Alternatively, you can provide a URL to an image hosted online.
 3. **Use Webcam**: Use your webcam for real-time sign language detection.
