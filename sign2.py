@@ -93,8 +93,16 @@ if option == "Upload Image":
 
 elif option == "Use Webcam":
     st.write("Using Webcam for Real-Time Sign Language Detection")
-    # Start webcam and capture frame
-    capture_button = st.button("Capture Image from Webcam")
+    # Flag to track capture state
+    captured = False
+
+    def capture_button_state():
+        if not captured:
+            return True
+        else:
+            return False
+
+    capture_button = st.button("Capture Image from Webcam", on_click=lambda: captured and st.experimental_rerun())
 
     if capture_button:
         webrtc_streamer(
@@ -115,6 +123,7 @@ elif option == "Use Webcam":
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
                     tmp_file.write(img_bytes.getvalue())
                     tmp_file.seek(0)
+                    tmp_file.close()  # Close the file explicitly
 
                     result = CLIENT.infer(tmp_file.name, model_id="sign-language-detection-ucv5d/2")
 
@@ -147,9 +156,12 @@ elif option == "Use Webcam":
             except Exception as e:
                 st.error(f"Error during inference: {e}")
 
+            # Set the captured flag to True
+            captured = True
+
 # Add some additional information
 st.write("## How to Use")
-st.write(""" 
+st.write("""
 1. **Upload an Image**: Use the file uploader to upload an image from your device.
 2. **Use Webcam**: Capture a picture from your webcam and perform real-time sign language detection.
 3. **Detection**: The app will use the Roboflow Sign Language Detection model to detect sign language gestures in the image or video stream.
