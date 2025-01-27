@@ -2,11 +2,13 @@
 # coding: utf-8
 
 # In[ ]:
+
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 from inference_sdk import InferenceHTTPClient
+import av
 import requests
-from PIL import Image
+from PIL import Image, ImageDraw
 import io
 import tempfile
 
@@ -19,11 +21,13 @@ CLIENT = InferenceHTTPClient(
 # Streamlit app title
 st.title("Sign Language Detection")
 
+# Confidence threshold (adjust as needed)
+confidence_threshold = st.slider("Confidence Threshold", 0.0, 1.0, 0.5, 0.01)
+
 # Custom VideoTransformer to process webcam frames
 class SignLanguageDetectionTransformer(VideoTransformerBase):
     def __init__(self):
         self.model_id = "sign-language-detection-ucv5d/2"
-        self.confidence_threshold = 0.3  # Confidence threshold set to 30%
 
     def transform(self, frame):
         img = frame.to_image()  # Convert frame to PIL Image
@@ -38,77 +42,155 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
             # Perform inference using the Roboflow API
             result = CLIENT.infer(tmp_file.name, model_id=self.model_id)
 
-        # Display only the detection results (Bounding boxes and labels)
-        detection_results = []
-
+        # Display the results (optional: draw bounding boxes on the frame)
         if result and "predictions" in result:
             for prediction in result["predictions"]:
                 confidence = prediction["confidence"]
-                if confidence >= self.confidence_threshold:  # Only process predictions with sufficient confidence
+                if confidence >= confidence_threshold:  # Only process predictions with sufficient confidence
                     x = prediction["x"]
                     y = prediction["y"]
                     width = prediction["width"]
                     height = prediction["height"]
                     label = prediction["class"]
 
-                    # Add each prediction to the results list in the required format
-                    detection_results.append({
-                        "Label": label,
-                        "Confidence": f"{confidence:.2f}",
-                        "Bounding Box": {
-                            "x": x,
-                            "y": y,
-                            "width": width,
-                            "height": height
-                        }
-                    })
-
-            # If there are any detections, display them in the proper format
-            if detection_results:
-                # Optionally, draw bounding boxes on the image
-                img = img.copy()
-                img = img.convert("RGB")
-                from PIL import ImageDraw
-                draw = ImageDraw.Draw(img)
-                for prediction in result["predictions"]:
-                    confidence = prediction["confidence"]
-                    if confidence >= self.confidence_threshold:
-                        x = prediction["x"]
-                        y = prediction["y"]
-                        width = prediction["width"]
-                        height = prediction["height"]
-                        label = prediction["class"]
-                        draw.rectangle(
-                            [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
-                            outline="red",
-                            width=2,
-                        )
-                        draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
-
-                st.write("Detection Results:")
-                st.json(detection_results)  # Show results as formatted JSON
-            else:
-                st.write("No sign language gestures detected.")
+                    # Draw bounding box and label on the frame (optional)
+                    img = img.copy()
+                    img = img.convert("RGB")
+                    draw = ImageDraw.Draw(img)
+                    draw.rectangle(
+                        [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
+                        outline="red",
+                        width=2,
+                    )
+                    draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
 
         return img  # Return the processed frame
 
-# Use webcam for real-time sign language detection
-st.write("Using Webcam for Real-Time Sign Language Detection")
+# Upload image, provide URL, or use webcam
+option = st.radio("Choose an option:", ("Upload Image", "Provide Image URL", "Use Webcam"))
 
-webrtc_streamer(
-    key="sign-language-detection",
-    video_transformer_factory=SignLanguageDetectionTransformer,
-    async_transform=True,
-    video_input=True,  # Enable video input to capture webcam
-    width=640,  # Set the width of the video stream (optional)
-    height=480  # Set the height of the video stream (optional)
-)
+if option == "Upload Image":
+    uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption='Uploaded Image.', use_container_width=True)
+        st.write("")
+        st.write("Detecting...")
+
+        # Convert the image to bytes while preserving the original format
+        img_bytes = io.BytesIO()
+        image.save(img_bytes, format=image.format)  # Preserve the original format (PNG, JPEG, etc.)
+        img_bytes.seek(0)
+
+        # Create a temporary file to save the image and use it for inference
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+            tmp_file.write(img_bytes.getvalue())
+            tmp_file.seek(0)
+            # Perform inference (Ensure correct input format for inference)
+            try:
+                result = CLIENT.infer(tmp_file.name, model_id="sign-language-detection-ucv5d/2")
+                # Display the results
+                if not result or "predictions" not in result or len(result["predictions"]) == 0:
+                    st.write("No sign language gestures detected. Please upload a clearer image with visible gestures.")
+                else:
+                    st.write("Detection Results:")
+                    st.json(result)
+
+                    # Visualize predictions on the image
+                    image_with_boxes = image.copy()
+                    draw = ImageDraw.Draw(image_with_boxes)
+                    for prediction in result["predictions"]:
+                        confidence = prediction["confidence"]
+                        if confidence >= confidence_threshold:
+                            x = prediction["x"]
+                            y = prediction["y"]
+                            width = prediction["width"]
+                            height = prediction["height"]
+                            label = prediction["class"]
+
+                            # Draw bounding box and label
+                            draw.rectangle(
+                                [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
+                                outline="red",
+                                width=2,
+                            )
+                            draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
+
+                    st.image(image_with_boxes, caption='Detected Gestures.', use_container_width=True)
+            except Exception as e:
+                st.error(f"Error during inference: {e}")
+
+elif option == "Provide Image URL":
+    image_url = st.text_input("Enter the image URL:")
+    if image_url:
+        try:
+            response = requests.get(image_url)
+            image = Image.open(io.BytesIO(response.content))
+            st.image(image, caption='Image from URL.', use_container_width=True)
+            st.write("")
+            st.write("Detecting...")
+
+            # Convert the image to bytes while preserving the original format
+            img_bytes = io.BytesIO()
+            image.save(img_bytes, format=image.format)  # Preserve the original format (PNG, JPEG, etc.)
+            img_bytes.seek(0)
+
+            # Create a temporary file to save the image and use it for inference
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+                tmp_file.write(img_bytes.getvalue())
+                tmp_file.seek(0)
+
+                # Perform inference
+                try:
+                    result = CLIENT.infer(tmp_file.name, model_id="sign-language-detection-ucv5d/2")
+                    # Display the results
+                    if not result or "predictions" not in result or len(result["predictions"]) == 0:
+                        st.write("No sign language gestures detected. Please upload a clearer image with visible gestures.")
+                    else:
+                        st.write("Detection Results:")
+                        st.json(result)
+
+                        # Visualize predictions on the image
+                        image_with_boxes = image.copy()
+                        draw = ImageDraw.Draw(image_with_boxes)
+                        for prediction in result["predictions"]:
+                            confidence = prediction["confidence"]
+                            if confidence >= confidence_threshold:
+                                x = prediction["x"]
+                                y = prediction["y"]
+                                width = prediction["width"]
+                                height = prediction["height"]
+                                label = prediction["class"]
+
+                                # Draw bounding box and label
+                                draw.rectangle(
+                                    [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
+                                    outline="red",
+                                    width=2,
+                                )
+                                draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
+
+                        st.image(image_with_boxes, caption='Detected Gestures.', use_container_width=True)
+                except Exception as e:
+                    st.error(f"Error during inference: {e}")
+        except Exception as e:
+            st.error(f"Error loading image from URL: {e}")
+
+elif option == "Use Webcam":
+    st.write("Using Webcam for Real-Time Sign Language Detection")
+    webrtc_streamer(
+        key="sign-language-detection",
+        video_transformer_factory=SignLanguageDetectionTransformer,
+        async_transform=True,
+    )
 
 # Add some additional information
 st.write("## How to Use")
-st.write(""" 
-1. **Webcam**: The webcam feed is automatically displayed, and real-time sign language detection is performed.
-2. **Detection**: The app will use the Roboflow Sign Language Detection model to detect sign language gestures in the webcam feed.
+st.write("""
+1. **Upload an Image**: Use the file uploader to upload an image from your device.
+2. **Provide Image URL**: Alternatively, you can provide a URL to an image hosted online.
+3. **Use Webcam**: Use your webcam for real-time sign language detection.
+4. **Detection**: The app will use the Roboflow Sign Language Detection model to detect sign language gestures in the image or video stream.
 """)
 
 st.write("## About the Model")
