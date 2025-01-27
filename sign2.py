@@ -87,13 +87,12 @@ if uploaded_file is not None:
                     # Combine detected labels into a prompt for Generative AI
                     prompt = f"The following sign language gestures were detected: {', '.join(detected_labels)}. Can you describe their meanings or provide more context about these gestures?"
                     try:
-                        # Generate content with Google Generative AI
-                        response = genai.generate_text(prompt)
+                        # Use the Chat method for generating content based on the prompt
+                        response = genai.chat(messages=[{"role": "user", "content": prompt}])
                         st.write("Generated Content Based on Detected Gestures:")
-                        st.write(response["text"])
+                        st.write(response["message"]["content"])
                     except Exception as e:
                         st.error(f"Error generating content: {e}")
         except Exception as e:
             st.error(f"Error during inference: {e}")
-
 
