@@ -4,3 +4,4 @@ inference-sdk
 requests
 pillow
 av
+opencv-python-headless
