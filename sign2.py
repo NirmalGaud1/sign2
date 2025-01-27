@@ -10,8 +10,8 @@ from PIL import Image, ImageDraw
 import io
 import tempfile
 import logging
-import streamlit_webrtc as webrtc
-import numpy as np
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+import av
 
 # Initialize logging
 logging.basicConfig(level=logging.DEBUG)
@@ -42,7 +42,7 @@ def process_image(image):
     try:
         # Convert the image to bytes while preserving the original format
         img_bytes = io.BytesIO()
-        image.save(img_bytes, format=image.format)
+        image.save(img_bytes, format="PNG")  # Save as PNG for consistency
         img_bytes.seek(0)
 
         # Create a temporary file to save the image and use it for inference
@@ -106,52 +106,62 @@ def generate_content_with_llm(detected_labels):
     except Exception as e:
         return f"Error generating content: {e}"
 
-# Add webcam stream functionality
-def video_frame_callback(frame):
-    """
-    Process the webcam frame and detect sign language gestures.
-    """
-    image = frame.to_image()
-    image_with_boxes, detected_labels = process_image(image)
+# Custom VideoTransformer to process webcam frames
+class SignLanguageDetectionTransformer(VideoTransformerBase):
+    def __init__(self):
+        self.detected_labels = []
 
-    if image_with_boxes and detected_labels:
-        # Generate and display content based on detected gestures using LLM
-        generated_content = generate_content_with_llm(detected_labels)
+    def transform(self, frame):
+        img = frame.to_ndarray(format="bgr24")  # Convert frame to numpy array (OpenCV format)
+        img_pil = Image.fromarray(img)  # Convert numpy array to PIL image
 
-        st.image(image_with_boxes, caption='Detected Gestures in Webcam Feed.', use_column_width=True)
-        st.write("Generated Content Based on Detected Gestures:")
-        st.write(generated_content)
+        # Perform inference on the frame
+        image_with_boxes, detected_labels = process_image(img_pil)
+        if image_with_boxes and detected_labels:
+            self.detected_labels = detected_labels
+            return image_with_boxes
+        return img
 
-    return frame
+# Upload image or use webcam
+option = st.radio("Choose an option:", ("Upload Image", "Use Webcam"))
 
-# WebRTC component for webcam integration
-webrtc_streamer = webrtc.Streamer(
-    key="sign-language-detection",
-    video_frame_callback=video_frame_callback,
-    media_stream_constraints={"video": True, "audio": False},
-)
+if option == "Upload Image":
+    uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption='Uploaded Image.', use_column_width=True)
+        st.write("Detecting...")
 
-# Add some additional information
-st.write("## How to Use")
-st.write(""" 
-1. **Webcam**: The app uses your webcam to capture real-time images.
-2. **Detection**: The app will use the Roboflow Sign Language Detection model to detect sign language gestures in the webcam feed.
-3. **Content Generation**: Based on the detected gestures, the app will generate explanations using Google Generative AI.
-""")
+        # Process the image and get results
+        image_with_boxes, detected_labels = process_image(image)
 
-st.write("## About the Model")
-st.write(""" 
-This app uses a pre-trained Sign Language Detection model hosted on Roboflow. The model has the following metrics:
-- **mAP**: 99.5%
-- **Precision**: 89.4%
-- **Recall**: 95.1%
-""")
+        if image_with_boxes and detected_labels:
+            # Display the image with bounding boxes and labels
+            st.image(image_with_boxes, caption='Detected Gestures.', use_column_width=True)
 
-st.write("## Model Details")
-st.write(""" 
-- **Model ID**: sign-language-detection-ucv5d/2
-- **Trained On**: 211 Images
-- **Model Type**: Roboflow 3.0 Object Detection (Fast)
-- **Checkpoint**: COCO
-""")
+            # Generate and display content based on detected gestures using LLM
+            generated_content = generate_content_with_llm(detected_labels)
+            st.write("Generated Content Based on Detected Gestures:")
+            st.write(generated_content)
+
+elif option == "Use Webcam":
+    st.write("Using Webcam for Real-Time Sign Language Detection")
+
+    # Start webcam and capture frame
+    webrtc_ctx = webrtc_streamer(
+        key="sign-language-detection",
+        video_transformer_factory=SignLanguageDetectionTransformer,
+        async_transform=False,  # Disable async for single-frame capture
+    )
+
+    if webrtc_ctx.video_transformer:
+        if st.button("Capture and Analyze"):
+            detected_labels = webrtc_ctx.video_transformer.detected_labels
+            if detected_labels:
+                # Generate and display content based on detected gestures using LLM
+                generated_content = generate_content_with_llm(detected_labels)
+                st.write("Generated Content Based on Detected Gestures:")
+                st.write(generated_content)
+            else:
+                st.warning("No gestures detected in the captured frame.")
 
