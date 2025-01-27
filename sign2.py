@@ -178,11 +178,18 @@ elif option == "Provide Image URL":
 
 elif option == "Use Webcam":
     st.write("Using Webcam for Real-Time Sign Language Detection")
-    webrtc_streamer(
-        key="sign-language-detection",
-        video_transformer_factory=SignLanguageDetectionTransformer,
-        async_transform=True,
-    )
+    # Add Start and Stop buttons
+    start_button = st.button("Start Webcam")
+    stop_button = st.button("Stop Webcam")
+
+    if start_button:
+        webrtc_streamer(
+            key="sign-language-detection",
+            video_transformer_factory=SignLanguageDetectionTransformer,
+            async_transform=True,
+        )
+    if stop_button:
+        st.write("Webcam stopped.")
 
 # Add some additional information
 st.write("## How to Use")
