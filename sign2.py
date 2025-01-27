@@ -10,6 +10,8 @@ from PIL import Image, ImageDraw
 import io
 import tempfile
 import logging
+import streamlit_webrtc as webrtc
+import numpy as np
 
 # Initialize logging
 logging.basicConfig(level=logging.DEBUG)
@@ -104,22 +106,52 @@ def generate_content_with_llm(detected_labels):
     except Exception as e:
         return f"Error generating content: {e}"
 
-# Upload image option
-uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
-
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption='Uploaded Image.', use_column_width=True)
-    st.write("Detecting...")
-
-    # Process the image and get results
+# Add webcam stream functionality
+def video_frame_callback(frame):
+    """
+    Process the webcam frame and detect sign language gestures.
+    """
+    image = frame.to_image()
     image_with_boxes, detected_labels = process_image(image)
 
     if image_with_boxes and detected_labels:
-        # Display the image with bounding boxes and labels
-        st.image(image_with_boxes, caption='Detected Gestures.', use_column_width=True)
-
         # Generate and display content based on detected gestures using LLM
         generated_content = generate_content_with_llm(detected_labels)
+
+        st.image(image_with_boxes, caption='Detected Gestures in Webcam Feed.', use_column_width=True)
         st.write("Generated Content Based on Detected Gestures:")
         st.write(generated_content)
+
+    return frame
+
+# WebRTC component for webcam integration
+webrtc_streamer = webrtc.Streamer(
+    key="sign-language-detection",
+    video_frame_callback=video_frame_callback,
+    media_stream_constraints={"video": True, "audio": False},
+)
+
+# Add some additional information
+st.write("## How to Use")
+st.write(""" 
+1. **Webcam**: The app uses your webcam to capture real-time images.
+2. **Detection**: The app will use the Roboflow Sign Language Detection model to detect sign language gestures in the webcam feed.
+3. **Content Generation**: Based on the detected gestures, the app will generate explanations using Google Generative AI.
+""")
+
+st.write("## About the Model")
+st.write(""" 
+This app uses a pre-trained Sign Language Detection model hosted on Roboflow. The model has the following metrics:
+- **mAP**: 99.5%
+- **Precision**: 89.4%
+- **Recall**: 95.1%
+""")
+
+st.write("## Model Details")
+st.write(""" 
+- **Model ID**: sign-language-detection-ucv5d/2
+- **Trained On**: 211 Images
+- **Model Type**: Roboflow 3.0 Object Detection (Fast)
+- **Checkpoint**: COCO
+""")
+
