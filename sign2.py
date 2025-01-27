@@ -6,7 +6,6 @@
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 from inference_sdk import InferenceHTTPClient
-import av
 import requests
 from PIL import Image, ImageDraw
 import io
@@ -178,18 +177,13 @@ elif option == "Provide Image URL":
 
 elif option == "Use Webcam":
     st.write("Using Webcam for Real-Time Sign Language Detection")
-    # Add Start and Stop buttons
-    start_button = st.button("Start Webcam")
-    stop_button = st.button("Stop Webcam")
-
-    if start_button:
-        webrtc_streamer(
-            key="sign-language-detection",
-            video_transformer_factory=SignLanguageDetectionTransformer,
-            async_transform=True,
-        )
-    if stop_button:
-        st.write("Webcam stopped.")
+    # Start webcam directly
+    webrtc_streamer(
+        key="sign-language-detection",
+        video_transformer_factory=SignLanguageDetectionTransformer,
+        async_transform=True,
+        video_input=True  # Enable webcam access
+    )
 
 # Add some additional information
 st.write("## How to Use")
