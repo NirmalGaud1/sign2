@@ -68,7 +68,7 @@ if uploaded_file is not None:
                         y = prediction["y"]
                         width = prediction["width"]
                         height = prediction["height"]
-                        label = prediction["class"]
+                        label = prediction["class"].lower()  # Convert to lowercase
                         detected_labels.append(label)  # Add detected label to list
 
                         # Draw bounding box and label
@@ -83,32 +83,32 @@ if uploaded_file is not None:
                 st.image(image_with_boxes, caption='Detected Gestures.', use_container_width=True)
 
                 sign_language_knowledge = {
-    "A": "The letter 'A' in American Sign Language (ASL) is formed by making a fist with your dominant hand, extending your thumb to the side, and pointing your hand forward.",
-    "B": "The letter 'B' in ASL is formed by extending all four fingers of your dominant hand upward, keeping them together, and then slightly bending your thumb.",
-    "C": "The letter 'C' in ASL is formed by curving your dominant hand into a 'C' shape, with your thumb tucked under your fingers.",
-    "D": "The letter 'D' in ASL is formed by extending your index finger and thumb to form a 'D' shape, with the other fingers closed.",
-    "E": "The letter 'E' in ASL is formed by extending your index finger straight out.",
-    "F": "The letter 'F' in ASL is formed by extending your index finger and middle finger straight out, with the other fingers closed.",
-    "G": "The letter 'G' in ASL is formed by making a fist with your dominant hand and extending your thumb straight up.",
-    "H": "The letter 'H' in ASL is formed by holding your dominant hand flat with your fingers spread apart.",
-    "I": "The letter 'I' in ASL is formed by extending your index finger straight up.",
-    "J": "The letter 'J' in ASL is formed by hooking your index finger.",
-    "K": "The letter 'K' in ASL is formed by making a fist with your dominant hand and extending your index finger and middle finger straight out.",
-    "L": "The letter 'L' in ASL is formed by extending your index finger and thumb to form an 'L' shape.",
-    "M": "The letter 'M' in ASL is formed by extending your index finger and middle finger straight out, with the other fingers closed, and then touching your thumb to your middle finger.",
-    "N": "The letter 'N' in ASL is formed by extending your index finger and middle finger straight out, with the other fingers closed.",
-    "O": "The letter 'O' in ASL is formed by making a circle with your thumb and index finger.",
-    "P": "The letter 'P' in ASL is formed by making a fist with your dominant hand and extending your thumb and index finger straight out.",
-    "Q": "The letter 'Q' in ASL is formed by making a fist with your dominant hand and extending your thumb and index finger straight out, then twisting your wrist slightly to the right.",
-    "R": "The letter 'R' in ASL is formed by making a fist with your dominant hand and extending your index finger straight out, then curving it slightly downward.",
-    "S": "The letter 'S' in ASL is formed by making a fist with your dominant hand and extending your little finger and ring finger straight out.",
-    "T": "The letter 'T' in ASL is formed by extending your hand flat with your palm facing inward and then tapping your middle finger on your thumb.",
-    "U": "The letter 'U' in ASL is formed by making a circle with your thumb and index finger, then closing your other fingers over them.",
-    "V": "The letter 'V' in ASL is formed by extending your index and middle fingers straight out, with the other fingers closed, forming a 'V' shape.",  # Corrected line with comma
-    "W": "The letter 'W' in ASL is formed by extending your index finger, middle finger, and ring finger straight out, with the other fingers closed, forming a 'W' shape.",
-    "X": "The letter 'X' in ASL is formed by crossing your index fingers in an 'X' shape.",
-    "Y": "The letter 'Y' in ASL is formed by extending your index finger straight up and then curving it downward.",
-    "Z": "The letter 'Z' in ASL is formed by making a fist with your dominant hand and extending your thumb and index finger straight out, then moving your hand in a circular motion.",
+                    "a": "The letter 'a' in American Sign Language (ASL) is formed by making a fist with your dominant hand, extending your thumb to the side, and pointing your hand forward.",
+                    "b": "The letter 'b' in ASL is formed by extending all four fingers of your dominant hand upward, keeping them together, and then slightly bending your thumb.",
+                    "c": "The letter 'c' in ASL is formed by curving your dominant hand into a 'c' shape, with your thumb tucked under your fingers.",
+                    "d": "The letter 'd' in ASL is formed by extending your index finger and thumb to form a 'd' shape, with the other fingers closed.",
+                    "e": "The letter 'e' in ASL is formed by extending your index finger straight out.",
+                    "f": "The letter 'f' in ASL is formed by extending your index finger and middle finger straight out, with the other fingers closed.",
+                    "g": "The letter 'g' in ASL is formed by making a fist with your dominant hand and extending your thumb straight up.",
+                    "h": "The letter 'h' in ASL is formed by holding your dominant hand flat with your fingers spread apart.",
+                    "i": "The letter 'i' in ASL is formed by extending your index finger straight up.",
+                    "j": "The letter 'j' in ASL is formed by hooking your index finger.",
+                    "k": "The letter 'k' in ASL is formed by making a fist with your dominant hand and extending your index finger and middle finger straight out.",
+                    "l": "The letter 'l' in ASL is formed by extending your index finger and thumb to form an 'l' shape.",
+                    "m": "The letter 'm' in ASL is formed by extending your index finger and middle finger straight out, with the other fingers closed, and then touching your thumb to your middle finger.",
+                    "n": "The letter 'n' in ASL is formed by extending your index finger and middle finger straight out, with the other fingers closed.",
+                    "o": "The letter 'o' in ASL is formed by making a circle with your thumb and index finger.",
+                    "p": "The letter 'p' in ASL is formed by making a fist with your dominant hand and extending your thumb and index finger straight out.",
+                    "q": "The letter 'q' in ASL is formed by making a fist with your dominant hand and extending your thumb and index finger straight out, then twisting your wrist slightly to the right.",
+                    "r": "The letter 'r' in ASL is formed by making a fist with your dominant hand and extending your index finger straight out, then curving it slightly downward.",
+                    "s": "The letter 's' in ASL is formed by making a fist with your dominant hand and extending your little finger and ring finger straight out.",
+                    "t": "The letter 't' in ASL is formed by extending your hand flat with your palm facing inward and then tapping your middle finger on your thumb.",
+                    "u": "The letter 'u' in ASL is formed by making a circle with your thumb and index finger, then closing your other fingers over them.",
+                    "v": "The letter 'v' in ASL is formed by extending your index and middle fingers straight out, with the other fingers closed, forming a 'v' shape.",
+                    "w": "The letter 'w' in ASL is formed by extending your index finger, middle finger, and ring finger straight out, with the other fingers closed, forming a 'w' shape.",
+                    "x": "The letter 'x' in ASL is formed by crossing your index fingers in an 'x' shape.",
+                    "y": "The letter 'y' in ASL is formed by extending your index finger straight up and then curving it downward.",
+                    "z": "The letter 'z' in ASL is formed by making a fist with your dominant hand and extending your thumb and index finger straight out, then moving your hand in a circular motion.",
                 }
 
                 # Generate content based on the detected gestures using Google Generative AI and knowledge base
@@ -116,9 +116,9 @@ if uploaded_file is not None:
                     response_parts = []
                     for label in detected_labels:
                         if label in sign_language_knowledge:
-                            response_parts.append(f"The gesture '{label}' means: {sign_language_knowledge[label]}")
+                            response_parts.append(f"the gesture '{label}' means: {sign_language_knowledge[label]}")
                         else:
-                            response_parts.append(f"The gesture '{label}' is not found in the knowledge base. More information is needed to provide a specific interpretation. Sign language gestures are highly context-dependent and vary between different sign languages.")
+                            response_parts.append(f"the gesture '{label}' is not found in the knowledge base. More information is needed to provide a specific interpretation. sign language gestures are highly context-dependent and vary between different sign languages.")
 
                     if response_parts:
                         st.write("Generated Content Based on Detected Gestures:")
