@@ -3,3 +3,4 @@ inference-sdk==0.35.0
 Pillow
 requests==2.32.0
 supervision==0.25.1
+altair
