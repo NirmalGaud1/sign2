@@ -11,6 +11,7 @@ import av
 import requests
 from PIL import Image
 import io
+import tempfile
 
 # Initialize the Roboflow client with your API key
 CLIENT = InferenceHTTPClient(
@@ -32,8 +33,12 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
         img.save(img_bytes, format="PNG")  # Save the image to a BytesIO object in PNG format
         img_bytes.seek(0)
 
-        # Perform inference using the Roboflow API
-        result = CLIENT.infer(img_bytes, model_id=self.model_id)
+        # Create a temporary file to save the image and use it for inference
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+            tmp_file.write(img_bytes.getvalue())
+            tmp_file.seek(0)
+            # Perform inference using the Roboflow API
+            result = CLIENT.infer(tmp_file.name, model_id=self.model_id)
 
         # Display the results (optional: draw bounding boxes on the frame)
         if result and "predictions" in result:
@@ -75,14 +80,18 @@ if option == "Upload Image":
         image.save(img_bytes, format=image.format)  # Preserve the original format (PNG, JPEG, etc.)
         img_bytes.seek(0)
 
-        # Perform inference (Ensure correct input format for inference)
-        try:
-            result = CLIENT.infer(img_bytes, model_id="sign-language-detection-ucv5d/2")
-            # Display the results
-            st.write("Detection Results:")
-            st.json(result)
-        except Exception as e:
-            st.error(f"Error during inference: {e}")
+        # Create a temporary file to save the image and use it for inference
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+            tmp_file.write(img_bytes.getvalue())
+            tmp_file.seek(0)
+            # Perform inference (Ensure correct input format for inference)
+            try:
+                result = CLIENT.infer(tmp_file.name, model_id="sign-language-detection-ucv5d/2")
+                # Display the results
+                st.write("Detection Results:")
+                st.json(result)
+            except Exception as e:
+                st.error(f"Error during inference: {e}")
 
 elif option == "Provide Image URL":
     image_url = st.text_input("Enter the image URL:")
@@ -99,14 +108,19 @@ elif option == "Provide Image URL":
             image.save(img_bytes, format=image.format)  # Preserve the original format (PNG, JPEG, etc.)
             img_bytes.seek(0)
 
-            # Perform inference
-            try:
-                result = CLIENT.infer(img_bytes, model_id="sign-language-detection-ucv5d/2")
-                # Display the results
-                st.write("Detection Results:")
-                st.json(result)
-            except Exception as e:
-                st.error(f"Error during inference: {e}")
+            # Create a temporary file to save the image and use it for inference
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+                tmp_file.write(img_bytes.getvalue())
+                tmp_file.seek(0)
+
+                # Perform inference
+                try:
+                    result = CLIENT.infer(tmp_file.name, model_id="sign-language-detection-ucv5d/2")
+                    # Display the results
+                    st.write("Detection Results:")
+                    st.json(result)
+                except Exception as e:
+                    st.error(f"Error during inference: {e}")
         except Exception as e:
             st.error(f"Error loading image from URL: {e}")
 
