@@ -6,7 +6,6 @@
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 from inference_sdk import InferenceHTTPClient
-import requests
 import numpy as np
 from PIL import Image, ImageDraw
 import io
@@ -35,53 +34,9 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
         self.model_id = "sign-language-detection-ucv5d/2"
 
     def transform(self, frame):
-        try:
-            # Convert frame to numpy array (OpenCV format)
-            img = frame.to_ndarray(format="bgr24")
-
-            # Convert the numpy array to a PIL Image for processing
-            img_pil = Image.fromarray(img)
-
-            # Save the image to a BytesIO object in PNG format
-            img_bytes = io.BytesIO()
-            img_pil.save(img_bytes, format="PNG")
-            img_bytes.seek(0)
-
-            # Create a temporary file to save the image and use it for inference
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
-                tmp_file.write(img_bytes.getvalue())
-                tmp_file.seek(0)
-
-                # Perform inference using the Roboflow API
-                result = CLIENT.infer(tmp_file.name, model_id=self.model_id)
-
-            # Display the results (optional: draw bounding boxes on the frame)
-            if result and "predictions" in result:
-                for prediction in result["predictions"]:
-                    confidence = prediction["confidence"]
-                    if confidence >= confidence_threshold:  # Only process predictions with sufficient confidence
-                        x = prediction["x"]
-                        y = prediction["y"]
-                        width = prediction["width"]
-                        height = prediction["height"]
-                        label = prediction["class"]
-
-                        # Draw bounding box and label on the frame
-                        img_pil = img_pil.convert("RGB")
-                        draw = ImageDraw.Draw(img_pil)
-                        draw.rectangle(
-                            [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
-                            outline="red",
-                            width=2,
-                        )
-                        draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
-
-            # Convert the PIL Image back to numpy array for display
-            img = np.array(img_pil)
-            return img  # Return the processed frame
-        except Exception as e:
-            logger.error(f"Error in transform method: {e}")
-            raise e
+        img = frame.to_ndarray(format="bgr24")  # Convert frame to numpy array (OpenCV format)
+        img_pil = Image.fromarray(img)  # Convert numpy array to PIL image
+        return img_pil  # Return the frame for capturing
 
 # Upload image or use webcam
 option = st.radio("Choose an option:", ("Upload Image", "Use Webcam"))
@@ -138,18 +93,65 @@ if option == "Upload Image":
 
 elif option == "Use Webcam":
     st.write("Using Webcam for Real-Time Sign Language Detection")
-    # Start webcam
-    webrtc_streamer(
-        key="sign-language-detection",
-        video_transformer_factory=SignLanguageDetectionTransformer,
-        async_transform=True,  # Use asynchronous transformation for better real-time performance
-    )
+    # Start webcam and capture frame
+    capture_button = st.button("Capture Image from Webcam")
+
+    if capture_button:
+        webrtc_streamer(
+            key="sign-language-detection",
+            video_transformer_factory=SignLanguageDetectionTransformer,
+            async_transform=False,  # Disable async for single-frame capture
+        )
+
+        # Capture the frame and perform inference on it
+        frame = SignLanguageDetectionTransformer().transform()
+        if frame:
+            # Perform inference using the Roboflow API
+            try:
+                img_bytes = io.BytesIO()
+                frame.save(img_bytes, format="PNG")
+                img_bytes.seek(0)
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+                    tmp_file.write(img_bytes.getvalue())
+                    tmp_file.seek(0)
+
+                    result = CLIENT.infer(tmp_file.name, model_id="sign-language-detection-ucv5d/2")
+
+                    if result and "predictions" in result:
+                        st.write("Detection Results:")
+                        st.json(result)
+
+                        # Visualize predictions on the image
+                        draw = ImageDraw.Draw(frame)
+                        for prediction in result["predictions"]:
+                            confidence = prediction["confidence"]
+                            if confidence >= confidence_threshold:
+                                x = prediction["x"]
+                                y = prediction["y"]
+                                width = prediction["width"]
+                                height = prediction["height"]
+                                label = prediction["class"]
+
+                                # Draw bounding box and label
+                                draw.rectangle(
+                                    [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
+                                    outline="red",
+                                    width=2,
+                                )
+                                draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
+
+                        st.image(frame, caption='Detected Gestures', use_container_width=True)
+                    else:
+                        st.write("No sign language gestures detected.")
+            except Exception as e:
+                st.error(f"Error during inference: {e}")
 
 # Add some additional information
 st.write("## How to Use")
 st.write(""" 
 1. **Upload an Image**: Use the file uploader to upload an image from your device.
-2. **Use Webcam**: Use your webcam for real-time sign language detection.
+2. **Use Webcam**: Capture a picture from your webcam and perform real-time sign language detection.
 3. **Detection**: The app will use the Roboflow Sign Language Detection model to detect sign language gestures in the image or video stream.
 """)
 
@@ -168,4 +170,3 @@ st.write("""
 - **Model Type**: Roboflow 3.0 Object Detection (Fast)
 - **Checkpoint**: COCO
 """)
-
