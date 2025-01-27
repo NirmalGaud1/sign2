@@ -75,12 +75,14 @@ if option == "Upload Image":
         image.save(img_bytes, format=image.format)  # Preserve the original format (PNG, JPEG, etc.)
         img_bytes.seek(0)
 
-        # Perform inference
-        result = CLIENT.infer(img_bytes, model_id="sign-language-detection-ucv5d/2")
-
-        # Display the results
-        st.write("Detection Results:")
-        st.json(result)
+        # Perform inference (Ensure correct input format for inference)
+        try:
+            result = CLIENT.infer(img_bytes, model_id="sign-language-detection-ucv5d/2")
+            # Display the results
+            st.write("Detection Results:")
+            st.json(result)
+        except Exception as e:
+            st.error(f"Error during inference: {e}")
 
 elif option == "Provide Image URL":
     image_url = st.text_input("Enter the image URL:")
@@ -98,11 +100,13 @@ elif option == "Provide Image URL":
             img_bytes.seek(0)
 
             # Perform inference
-            result = CLIENT.infer(img_bytes, model_id="sign-language-detection-ucv5d/2")
-
-            # Display the results
-            st.write("Detection Results:")
-            st.json(result)
+            try:
+                result = CLIENT.infer(img_bytes, model_id="sign-language-detection-ucv5d/2")
+                # Display the results
+                st.write("Detection Results:")
+                st.json(result)
+            except Exception as e:
+                st.error(f"Error during inference: {e}")
         except Exception as e:
             st.error(f"Error loading image from URL: {e}")
 
