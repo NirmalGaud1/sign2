@@ -123,28 +123,3 @@ if uploaded_file is not None:
         generated_content = generate_content_with_llm(detected_labels)
         st.write("Generated Content Based on Detected Gestures:")
         st.write(generated_content)
-
-# Add some additional information
-st.write("## How to Use")
-st.write(""" 
-1. **Upload an Image**: Use the file uploader to upload an image from your device.
-2. **Detection**: The app will use the Roboflow Sign Language Detection model to detect sign language gestures in the image.
-3. **Content Generation**: Based on the detected gestures, the app will generate explanations using Google Generative AI.
-""")
-
-st.write("## About the Model")
-st.write("""
-This app uses a pre-trained Sign Language Detection model hosted on Roboflow. The model has the following metrics:
-- **mAP**: 99.5%
-- **Precision**: 89.4%
-- **Recall**: 95.1%
-""")
-
-st.write("## Model Details")
-st.write("""
-- **Model ID**: sign-language-detection-ucv5d/2
-- **Trained On**: 211 Images
-- **Model Type**: Roboflow 3.0 Object Detection (Fast)
-- **Checkpoint**: COCO
-""")
-
