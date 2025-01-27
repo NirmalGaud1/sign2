@@ -13,6 +13,11 @@ import io
 import tempfile
 import numpy as np
 import cv2
+import logging
+
+# Initialize logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Initialize the Roboflow client with your API key
 CLIENT = InferenceHTTPClient(
@@ -32,49 +37,61 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
         self.model_id = "sign-language-detection-ucv5d/2"
 
     def transform(self, frame):
-        # Convert frame to a numpy array
-        img = frame.to_ndarray(format="bgr24")
+        try:
+            logger.debug("Transforming frame...")
+            # Convert frame to a numpy array
+            img = frame.to_ndarray(format="bgr24")
+            logger.debug("Frame converted to numpy array.")
 
-        # Convert the numpy array to a PIL Image
-        img_pil = Image.fromarray(img)
+            # Convert the numpy array to a PIL Image
+            img_pil = Image.fromarray(img)
+            logger.debug("Frame converted to PIL Image.")
 
-        # Save the image to a BytesIO object in PNG format
-        img_bytes = io.BytesIO()
-        img_pil.save(img_bytes, format="PNG")
-        img_bytes.seek(0)
+            # Save the image to a BytesIO object in PNG format
+            img_bytes = io.BytesIO()
+            img_pil.save(img_bytes, format="PNG")
+            img_bytes.seek(0)
+            logger.debug("Frame saved to BytesIO object.")
 
-        # Create a temporary file to save the image and use it for inference
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
-            tmp_file.write(img_bytes.getvalue())
-            tmp_file.seek(0)
-            # Perform inference using the Roboflow API
-            result = CLIENT.infer(tmp_file.name, model_id=self.model_id)
+            # Create a temporary file to save the image and use it for inference
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+                tmp_file.write(img_bytes.getvalue())
+                tmp_file.seek(0)
+                logger.debug("Temporary file created.")
 
-        # Display the results (optional: draw bounding boxes on the frame)
-        if result and "predictions" in result:
-            for prediction in result["predictions"]:
-                confidence = prediction["confidence"]
-                if confidence >= confidence_threshold:  # Only process predictions with sufficient confidence
-                    x = prediction["x"]
-                    y = prediction["y"]
-                    width = prediction["width"]
-                    height = prediction["height"]
-                    label = prediction["class"]
+                # Perform inference using the Roboflow API
+                result = CLIENT.infer(tmp_file.name, model_id=self.model_id)
+                logger.debug(f"Inference result: {result}")
 
-                    # Draw bounding box and label on the frame (optional)
-                    img_pil = img_pil.copy()
-                    img_pil = img_pil.convert("RGB")
-                    draw = ImageDraw.Draw(img_pil)
-                    draw.rectangle(
-                        [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
-                        outline="red",
-                        width=2,
-                    )
-                    draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
+            # Display the results (optional: draw bounding boxes on the frame)
+            if result and "predictions" in result:
+                for prediction in result["predictions"]:
+                    confidence = prediction["confidence"]
+                    if confidence >= confidence_threshold:  # Only process predictions with sufficient confidence
+                        x = prediction["x"]
+                        y = prediction["y"]
+                        width = prediction["width"]
+                        height = prediction["height"]
+                        label = prediction["class"]
 
-        # Convert the PIL Image back to a numpy array
-        img = np.array(img_pil)
-        return img  # Return the processed frame
+                        # Draw bounding box and label on the frame (optional)
+                        img_pil = img_pil.copy()
+                        img_pil = img_pil.convert("RGB")
+                        draw = ImageDraw.Draw(img_pil)
+                        draw.rectangle(
+                            [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
+                            outline="red",
+                            width=2,
+                        )
+                        draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
+
+            # Convert the PIL Image back to a numpy array
+            img = np.array(img_pil)
+            logger.debug("Frame processed successfully.")
+            return img  # Return the processed frame
+        except Exception as e:
+            logger.error(f"Error in transform method: {e}")
+            raise e
 
 # Upload image, provide URL, or use webcam
 option = st.radio("Choose an option:", ("Upload Image", "Provide Image URL", "Use Webcam"))
