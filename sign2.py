@@ -2,7 +2,6 @@
 # coding: utf-8
 
 # In[ ]:
-
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 from inference_sdk import InferenceHTTPClient
@@ -101,6 +100,8 @@ webrtc_streamer(
     video_transformer_factory=SignLanguageDetectionTransformer,
     async_transform=True,
     video_input=True,  # Enable video input to capture webcam
+    width=640,  # Set the width of the video stream (optional)
+    height=480  # Set the height of the video stream (optional)
 )
 
 # Add some additional information
@@ -125,5 +126,3 @@ st.write("""
 - **Model Type**: Roboflow 3.0 Object Detection (Fast)
 - **Checkpoint**: COCO
 """)
-
-
