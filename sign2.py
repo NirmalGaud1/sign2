@@ -41,8 +41,9 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
             result = CLIENT.infer(tmp_file.name, model_id=self.model_id)
 
         # Display only the detection results (Bounding boxes and labels)
+        detection_results = []
+
         if result and "predictions" in result:
-            detection_results = []
             for prediction in result["predictions"]:
                 confidence = prediction["confidence"]
                 if confidence >= self.confidence_threshold:  # Only process predictions with sufficient confidence
@@ -52,7 +53,7 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
                     height = prediction["height"]
                     label = prediction["class"]
 
-                    # Append the results in a clean format
+                    # Add each prediction to the results list in the required format
                     detection_results.append({
                         "Label": label,
                         "Confidence": f"{confidence:.2f}",
@@ -64,10 +65,10 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
                         }
                     })
 
-            # Display the detection results if any
+            # If there are any detections, display them in a JSON-like format
             if detection_results:
                 st.write("Detection Results:")
-                st.json(detection_results)
+                st.json(detection_results)  # This will display the results as formatted JSON
             else:
                 st.write("No sign language gestures detected.")
 
@@ -97,10 +98,8 @@ if option == "Upload Image":
             try:
                 result = CLIENT.infer(tmp_file.name, model_id="sign-language-detection-ucv5d/2")
                 # Display the results
-                if not result or "predictions" not in result or len(result["predictions"]) == 0:
-                    st.write("No sign language gestures detected. Please upload a clearer image with visible gestures.")
-                else:
-                    detection_results = []
+                detection_results = []
+                if result and "predictions" in result and len(result["predictions"]) > 0:
                     for prediction in result["predictions"]:
                         confidence = prediction["confidence"]
                         if confidence >= 0.3:  # Confidence threshold
@@ -123,9 +122,11 @@ if option == "Upload Image":
 
                     if detection_results:
                         st.write("Detection Results:")
-                        st.json(detection_results)
+                        st.json(detection_results)  # Show results in JSON format
                     else:
                         st.write("No sign language gestures detected.")
+                else:
+                    st.write("No sign language gestures detected.")
             except Exception as e:
                 st.error(f"Error during inference: {e}")
 
@@ -153,10 +154,8 @@ elif option == "Provide Image URL":
                 try:
                     result = CLIENT.infer(tmp_file.name, model_id="sign-language-detection-ucv5d/2")
                     # Display the results
-                    if not result or "predictions" not in result or len(result["predictions"]) == 0:
-                        st.write("No sign language gestures detected. Please upload a clearer image with visible gestures.")
-                    else:
-                        detection_results = []
+                    detection_results = []
+                    if result and "predictions" in result and len(result["predictions"]) > 0:
                         for prediction in result["predictions"]:
                             confidence = prediction["confidence"]
                             if confidence >= 0.3:  # Confidence threshold
@@ -179,7 +178,7 @@ elif option == "Provide Image URL":
 
                         if detection_results:
                             st.write("Detection Results:")
-                            st.json(detection_results)
+                            st.json(detection_results)  # Show results in JSON format
                         else:
                             st.write("No sign language gestures detected.")
                 except Exception as e:
