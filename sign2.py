@@ -29,7 +29,7 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
     def transform(self, frame):
         img = frame.to_image()  # Convert frame to PIL Image
         img_bytes = io.BytesIO()
-        img.save(img_bytes, format="JPEG")  # Save the image to a BytesIO object
+        img.save(img_bytes, format="PNG")  # Save the image to a BytesIO object in PNG format
         img_bytes.seek(0)
 
         # Perform inference using the Roboflow API
@@ -70,9 +70,9 @@ if option == "Upload Image":
         st.write("")
         st.write("Detecting...")
 
-        # Convert the image to bytes
+        # Convert the image to bytes while preserving the original format
         img_bytes = io.BytesIO()
-        image.save(img_bytes, format="JPEG")
+        image.save(img_bytes, format=image.format)  # Preserve the original format (PNG, JPEG, etc.)
         img_bytes.seek(0)
 
         # Perform inference
@@ -92,9 +92,9 @@ elif option == "Provide Image URL":
             st.write("")
             st.write("Detecting...")
 
-            # Convert the image to bytes
+            # Convert the image to bytes while preserving the original format
             img_bytes = io.BytesIO()
-            image.save(img_bytes, format="JPEG")
+            image.save(img_bytes, format=image.format)  # Preserve the original format (PNG, JPEG, etc.)
             img_bytes.seek(0)
 
             # Perform inference
