@@ -88,9 +88,10 @@ if uploaded_file is not None:
                     prompt = f"The following sign language gestures were detected: {', '.join(detected_labels)}. Can you describe their meanings or provide more context about these gestures?"
                     try:
                         # Generate content with Google Generative AI
-                        response = genai.generate_text(prompt)
+                        model = genai.GenerativeModel("gemini-1.5-flash")  # Use a specific Gemini model
+                        response = model.generate_content(prompt)
                         st.write("Generated Content Based on Detected Gestures:")
-                        st.write(response["text"])
+                        st.write(response.text)
                     except Exception as e:
                         st.error(f"Error generating content: {e}")
         except Exception as e:
