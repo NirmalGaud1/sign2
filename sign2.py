@@ -178,16 +178,19 @@ elif option == "Provide Image URL":
 elif option == "Use Webcam":
     st.write("Using Webcam for Real-Time Sign Language Detection")
     # Start webcam directly
-    webrtc_streamer(
-        key="sign-language-detection",
-        video_transformer_factory=SignLanguageDetectionTransformer,
-        async_transform=True,
-        video_input=True  # Enable webcam access
-    )
+    try:
+        webrtc_streamer(
+            key="sign-language-detection",
+            video_transformer_factory=SignLanguageDetectionTransformer,
+            async_transform=False,  # Synchronous processing for webcam frames
+            video_input=True  # Enable webcam access
+        )
+    except Exception as e:
+        st.error(f"Error accessing webcam: {e}")
 
 # Add some additional information
 st.write("## How to Use")
-st.write("""
+st.write(""" 
 1. **Upload an Image**: Use the file uploader to upload an image from your device.
 2. **Provide Image URL**: Alternatively, you can provide a URL to an image hosted online.
 3. **Use Webcam**: Use your webcam for real-time sign language detection.
