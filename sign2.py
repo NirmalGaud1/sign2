@@ -68,7 +68,7 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
             # If there are any detections, display them in the proper format
             if detection_results:
                 st.write("Detection Results:")
-                # Display as formatted JSON array (no `0:` prefix)
+                # Display the list of results as proper JSON without prefix
                 st.json(detection_results)
             else:
                 st.write("No sign language gestures detected.")
@@ -219,3 +219,4 @@ st.write("""
 - **Model Type**: Roboflow 3.0 Object Detection (Fast)
 - **Checkpoint**: COCO
 """)
+
