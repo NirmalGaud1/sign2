@@ -5,80 +5,134 @@
 
 
 import streamlit as st
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 from inference_sdk import InferenceHTTPClient
-from PIL import Image
+import av
 import requests
-from io import BytesIO
+from PIL import Image
+import io
 
-# Set the API URL and API key
-API_URL = "https://detect.roboflow.com"
-API_KEY = "dvO9HlZOMA5WCA7NoXtQ"
-MODEL_ID = "sign-language-detection-ucv5d/2"
+# Initialize the Roboflow client with your API key
+CLIENT = InferenceHTTPClient(
+    api_url="https://detect.roboflow.com",
+    api_key="dvO9HlZOMA5WCA7NoXtQ"  # Your API key
+)
 
-# Initialize the inference client
-client = InferenceHTTPClient(api_url=API_URL, api_key=API_KEY)
-
-# Title for the Streamlit app
+# Streamlit app title
 st.title("Sign Language Detection")
 
-# Sidebar for navigation
-st.sidebar.title("Options")
-app_mode = st.sidebar.radio("Choose an option:", ["Upload Image/Video", "Webcam", "Try With URL"])
+# Custom VideoTransformer to process webcam frames
+class SignLanguageDetectionTransformer(VideoTransformerBase):
+    def __init__(self):
+        self.model_id = "sign-language-detection-ucv5d/2"
 
-# Function to handle image or video upload
-def upload_file():
-    uploaded_file = st.file_uploader("Choose an image or video", type=["jpg", "jpeg", "png", "mp4"])
+    def transform(self, frame):
+        img = frame.to_image()  # Convert frame to PIL Image
+        img_path = "temp_frame.jpg"
+        img.save(img_path)  # Save the frame as a temporary image file
+
+        # Perform inference using the Roboflow API
+        result = CLIENT.infer(img_path, model_id=self.model_id)
+
+        # Display the results (optional: draw bounding boxes on the frame)
+        if result and "predictions" in result:
+            for prediction in result["predictions"]:
+                x = prediction["x"]
+                y = prediction["y"]
+                width = prediction["width"]
+                height = prediction["height"]
+                confidence = prediction["confidence"]
+                label = prediction["class"]
+
+                # Draw bounding box and label on the frame (optional)
+                img = img.copy()
+                img = img.convert("RGB")
+                from PIL import ImageDraw
+                draw = ImageDraw.Draw(img)
+                draw.rectangle(
+                    [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
+                    outline="red",
+                    width=2,
+                )
+                draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
+
+        return img  # Return the processed frame
+
+# Upload image, provide URL, or use webcam
+option = st.radio("Choose an option:", ("Upload Image", "Provide Image URL", "Use Webcam"))
+
+if option == "Upload Image":
+    uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
-        # Display the uploaded file
-        if uploaded_file.type.startswith('image'):
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Uploaded Image", use_column_width=True)
-            # Perform inference on the uploaded image
-            result = client.infer(uploaded_file, model_id=MODEL_ID)
-            st.write(result)
-        elif uploaded_file.type.startswith('video'):
-            st.video(uploaded_file)
-            # Handle video processing here if needed
+        image = Image.open(uploaded_file)
+        st.image(image, caption='Uploaded Image.', use_column_width=True)
+        st.write("")
+        st.write("Detecting...")
 
-# Function to use webcam
-def use_webcam():
-    st.subheader("Webcam Input")
-    webcam_image = st.camera_input("Take a picture")
-    if webcam_image:
-        # Display the webcam capture
-        st.image(webcam_image)
-        # Perform inference on the webcam image
-        result = client.infer(webcam_image, model_id=MODEL_ID)
-        st.write(result)
+        # Save the image to a temporary file
+        image_path = "temp_image.jpg"
+        image.save(image_path)
 
-# Function to handle URL input
-def try_with_url():
-    url = st.text_input("Enter Image or YouTube URL")
-    if url:
+        # Perform inference
+        result = CLIENT.infer(image_path, model_id="sign-language-detection-ucv5d/2")
+
+        # Display the results
+        st.write("Detection Results:")
+        st.json(result)
+
+elif option == "Provide Image URL":
+    image_url = st.text_input("Enter the image URL:")
+    if image_url:
         try:
-            if url.endswith(".jpg") or url.endswith(".jpeg") or url.endswith(".png"):
-                # If it's an image URL, load and display it
-                response = requests.get(url)
-                img = Image.open(BytesIO(response.content))
-                st.image(img, caption="Image from URL", use_column_width=True)
-                # Perform inference on the image
-                result = client.infer(url, model_id=MODEL_ID)
-                st.write(result)
-            else:
-                # Handle YouTube URL or other video sources
-                st.video(url)
+            response = requests.get(image_url)
+            image = Image.open(io.BytesIO(response.content))
+            st.image(image, caption='Image from URL.', use_column_width=True)
+            st.write("")
+            st.write("Detecting...")
+
+            # Save the image to a temporary file
+            image_path = "temp_image.jpg"
+            image.save(image_path)
+
+            # Perform inference
+            result = CLIENT.infer(image_path, model_id="sign-language-detection-ucv5d/2")
+
+            # Display the results
+            st.write("Detection Results:")
+            st.json(result)
         except Exception as e:
-            st.error(f"Error fetching URL: {e}")
+            st.error(f"Error loading image from URL: {e}")
 
-# Conditional rendering based on the selected option
-if app_mode == "Upload Image/Video":
-    upload_file()
-elif app_mode == "Webcam":
-    use_webcam()
-elif app_mode == "Try With URL":
-    try_with_url()
+elif option == "Use Webcam":
+    st.write("Using Webcam for Real-Time Sign Language Detection")
+    webrtc_streamer(
+        key="sign-language-detection",
+        video_transformer_factory=SignLanguageDetectionTransformer,
+        async_transform=True,
+    )
 
-# Adjust confidence threshold using a slider
-confidence_threshold = st.slider("Confidence Threshold", 0, 100, 50)
-st.write(f"Confidence Threshold: {confidence_threshold}%")
+# Add some additional information
+st.write("## How to Use")
+st.write("""
+1. **Upload an Image**: Use the file uploader to upload an image from your device.
+2. **Provide Image URL**: Alternatively, you can provide a URL to an image hosted online.
+3. **Use Webcam**: Use your webcam for real-time sign language detection.
+4. **Detection**: The app will use the Roboflow Sign Language Detection model to detect sign language gestures in the image or video stream.
+""")
+
+st.write("## About the Model")
+st.write("""
+This app uses a pre-trained Sign Language Detection model hosted on Roboflow. The model has the following metrics:
+- **mAP**: 99.5%
+- **Precision**: 89.4%
+- **Recall**: 95.1%
+""")
+
+st.write("## Model Details")
+st.write("""
+- **Model ID**: sign-language-detection-ucv5d/2
+- **Trained On**: 211 Images
+- **Model Type**: Roboflow 3.0 Object Detection (Fast)
+- **Checkpoint**: COCO
+""")
 
