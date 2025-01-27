@@ -91,8 +91,7 @@ def start_webcam():
         webrtc_streamer(
             key="sign-language-detection",
             video_transformer_factory=SignLanguageDetectionTransformer,
-            async_transform=True,  # Set async_transform=True for better real-time performance
-            video_input=True  # Enable webcam input
+            async_transform=True  # Enable async transform for better real-time performance
         )
     except Exception as e:
         logger.error(f"Error starting webcam: {e}")
@@ -130,3 +129,4 @@ st.write("""
 - **Model Type**: Roboflow 3.0 Object Detection (Fast)
 - **Checkpoint**: COCO
 """)
+
