@@ -28,11 +28,12 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
 
     def transform(self, frame):
         img = frame.to_image()  # Convert frame to PIL Image
-        img_path = "temp_frame.jpg"
-        img.save(img_path)  # Save the frame as a temporary image file
+        img_bytes = io.BytesIO()
+        img.save(img_bytes, format="JPEG")  # Save the image to a BytesIO object
+        img_bytes.seek(0)
 
         # Perform inference using the Roboflow API
-        result = CLIENT.infer(img_path, model_id=self.model_id)
+        result = CLIENT.infer(img_bytes, model_id=self.model_id)
 
         # Display the results (optional: draw bounding boxes on the frame)
         if result and "predictions" in result:
@@ -65,16 +66,17 @@ if option == "Upload Image":
     uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        st.image(image, caption='Uploaded Image.', use_column_width=True)
+        st.image(image, caption='Uploaded Image.', use_container_width=True)
         st.write("")
         st.write("Detecting...")
 
-        # Save the image to a temporary file
-        image_path = "temp_image.jpg"
-        image.save(image_path)
+        # Convert the image to bytes
+        img_bytes = io.BytesIO()
+        image.save(img_bytes, format="JPEG")
+        img_bytes.seek(0)
 
         # Perform inference
-        result = CLIENT.infer(image_path, model_id="sign-language-detection-ucv5d/2")
+        result = CLIENT.infer(img_bytes, model_id="sign-language-detection-ucv5d/2")
 
         # Display the results
         st.write("Detection Results:")
@@ -86,16 +88,17 @@ elif option == "Provide Image URL":
         try:
             response = requests.get(image_url)
             image = Image.open(io.BytesIO(response.content))
-            st.image(image, caption='Image from URL.', use_column_width=True)
+            st.image(image, caption='Image from URL.', use_container_width=True)
             st.write("")
             st.write("Detecting...")
 
-            # Save the image to a temporary file
-            image_path = "temp_image.jpg"
-            image.save(image_path)
+            # Convert the image to bytes
+            img_bytes = io.BytesIO()
+            image.save(img_bytes, format="JPEG")
+            img_bytes.seek(0)
 
             # Perform inference
-            result = CLIENT.infer(image_path, model_id="sign-language-detection-ucv5d/2")
+            result = CLIENT.infer(img_bytes, model_id="sign-language-detection-ucv5d/2")
 
             # Display the results
             st.write("Detection Results:")
@@ -135,4 +138,3 @@ st.write("""
 - **Model Type**: Roboflow 3.0 Object Detection (Fast)
 - **Checkpoint**: COCO
 """)
-
