@@ -5,3 +5,4 @@ requests
 pillow
 av
 opencv-python-headless
+google-generativeai 
