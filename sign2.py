@@ -8,7 +8,6 @@ from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 from inference_sdk import InferenceHTTPClient
 import requests
 import numpy as np
-import cv2
 from PIL import Image, ImageDraw
 import io
 import tempfile
@@ -56,7 +55,7 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
                 # Perform inference using the Roboflow API
                 result = CLIENT.infer(tmp_file.name, model_id=self.model_id)
 
-            # Draw bounding boxes and labels if predictions exist
+            # Display the results (optional: draw bounding boxes on the frame)
             if result and "predictions" in result:
                 for prediction in result["predictions"]:
                     confidence = prediction["confidence"]
@@ -129,4 +128,3 @@ st.write("""
 - **Model Type**: Roboflow 3.0 Object Detection (Fast)
 - **Checkpoint**: COCO
 """)
-
