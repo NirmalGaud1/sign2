@@ -6,7 +6,6 @@
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 from inference_sdk import InferenceHTTPClient
-import av
 import requests
 from PIL import Image, ImageDraw
 import io
@@ -38,32 +37,26 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
 
     def transform(self, frame):
         try:
-            logger.debug("Transforming frame...")
-            # Convert frame to a numpy array
+            # Convert frame to numpy array (OpenCV format)
             img = frame.to_ndarray(format="bgr24")
-            logger.debug("Frame converted to numpy array.")
 
-            # Convert the numpy array to a PIL Image
+            # Convert the numpy array to a PIL Image for processing
             img_pil = Image.fromarray(img)
-            logger.debug("Frame converted to PIL Image.")
 
             # Save the image to a BytesIO object in PNG format
             img_bytes = io.BytesIO()
             img_pil.save(img_bytes, format="PNG")
             img_bytes.seek(0)
-            logger.debug("Frame saved to BytesIO object.")
 
             # Create a temporary file to save the image and use it for inference
             with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
                 tmp_file.write(img_bytes.getvalue())
                 tmp_file.seek(0)
-                logger.debug("Temporary file created.")
 
                 # Perform inference using the Roboflow API
                 result = CLIENT.infer(tmp_file.name, model_id=self.model_id)
-                logger.debug(f"Inference result: {result}")
 
-            # Display the results (optional: draw bounding boxes on the frame)
+            # Draw bounding boxes and labels if predictions exist
             if result and "predictions" in result:
                 for prediction in result["predictions"]:
                     confidence = prediction["confidence"]
@@ -74,8 +67,7 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
                         height = prediction["height"]
                         label = prediction["class"]
 
-                        # Draw bounding box and label on the frame (optional)
-                        img_pil = img_pil.copy()
+                        # Draw bounding box and label on the frame
                         img_pil = img_pil.convert("RGB")
                         draw = ImageDraw.Draw(img_pil)
                         draw.rectangle(
@@ -85,9 +77,8 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
                         )
                         draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
 
-            # Convert the PIL Image back to a numpy array
+            # Convert the PIL Image back to numpy array for display
             img = np.array(img_pil)
-            logger.debug("Frame processed successfully.")
             return img  # Return the processed frame
         except Exception as e:
             logger.error(f"Error in transform method: {e}")
@@ -205,16 +196,17 @@ elif option == "Provide Image URL":
 
 elif option == "Use Webcam":
     st.write("Using Webcam for Real-Time Sign Language Detection")
-    # Start webcam
+    # Start webcam in a separate window and show predictions
     webrtc_streamer(
         key="sign-language-detection",
         video_transformer_factory=SignLanguageDetectionTransformer,
-        async_transform=True,
+        async_transform=True,  # Set async_transform=True for better real-time performance
+        video_input=True  # Enable webcam input
     )
 
 # Add some additional information
 st.write("## How to Use")
-st.write("""
+st.write(""" 
 1. **Upload an Image**: Use the file uploader to upload an image from your device.
 2. **Provide Image URL**: Alternatively, you can provide a URL to an image hosted online.
 3. **Use Webcam**: Use your webcam for real-time sign language detection.
