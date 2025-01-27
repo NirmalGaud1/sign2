@@ -6,12 +6,13 @@
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 from inference_sdk import InferenceHTTPClient
+import av
 import requests
-import numpy as np
-import cv2
 from PIL import Image, ImageDraw
 import io
 import tempfile
+import numpy as np
+import cv2
 
 # Initialize the Roboflow client with your API key
 CLIENT = InferenceHTTPClient(
@@ -31,10 +32,15 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
         self.model_id = "sign-language-detection-ucv5d/2"
 
     def transform(self, frame):
-        # Convert the frame to an image for processing
-        img = frame.to_image()  # Convert frame to PIL Image
+        # Convert frame to a numpy array
+        img = frame.to_ndarray(format="bgr24")
+
+        # Convert the numpy array to a PIL Image
+        img_pil = Image.fromarray(img)
+
+        # Save the image to a BytesIO object in PNG format
         img_bytes = io.BytesIO()
-        img.save(img_bytes, format="PNG")  # Save the image to a BytesIO object in PNG format
+        img_pil.save(img_bytes, format="PNG")
         img_bytes.seek(0)
 
         # Create a temporary file to save the image and use it for inference
@@ -44,7 +50,7 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
             # Perform inference using the Roboflow API
             result = CLIENT.infer(tmp_file.name, model_id=self.model_id)
 
-        # Process the result
+        # Display the results (optional: draw bounding boxes on the frame)
         if result and "predictions" in result:
             for prediction in result["predictions"]:
                 confidence = prediction["confidence"]
@@ -55,10 +61,10 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
                     height = prediction["height"]
                     label = prediction["class"]
 
-                    # Draw bounding box and label on the frame
-                    img = img.copy()
-                    img = img.convert("RGB")
-                    draw = ImageDraw.Draw(img)
+                    # Draw bounding box and label on the frame (optional)
+                    img_pil = img_pil.copy()
+                    img_pil = img_pil.convert("RGB")
+                    draw = ImageDraw.Draw(img_pil)
                     draw.rectangle(
                         [(x - width / 2, y - height / 2), (x + width / 2, y + height / 2)],
                         outline="red",
@@ -66,6 +72,8 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
                     )
                     draw.text((x - width / 2, y - height / 2 - 10), f"{label} ({confidence:.2f})", fill="red")
 
+        # Convert the PIL Image back to a numpy array
+        img = np.array(img_pil)
         return img  # Return the processed frame
 
 # Upload image, provide URL, or use webcam
@@ -180,20 +188,16 @@ elif option == "Provide Image URL":
 
 elif option == "Use Webcam":
     st.write("Using Webcam for Real-Time Sign Language Detection")
-    # Start webcam and processing
-    try:
-        webrtc_streamer(
-            key="sign-language-detection",
-            video_transformer_factory=SignLanguageDetectionTransformer,
-            async_transform=True,  # Set async_transform=True for better real-time performance
-            video_input=True  # Ensure webcam is enabled
-        )
-    except Exception as e:
-        st.error(f"Error accessing webcam: {e}")
+    # Start webcam
+    webrtc_streamer(
+        key="sign-language-detection",
+        video_transformer_factory=SignLanguageDetectionTransformer,
+        async_transform=True,
+    )
 
 # Add some additional information
 st.write("## How to Use")
-st.write(""" 
+st.write("""
 1. **Upload an Image**: Use the file uploader to upload an image from your device.
 2. **Provide Image URL**: Alternatively, you can provide a URL to an image hosted online.
 3. **Use Webcam**: Use your webcam for real-time sign language detection.
