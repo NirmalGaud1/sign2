@@ -65,10 +65,11 @@ class SignLanguageDetectionTransformer(VideoTransformerBase):
                         }
                     })
 
-            # If there are any detections, display them in a JSON-like format
+            # If there are any detections, display them in the proper format
             if detection_results:
                 st.write("Detection Results:")
-                st.json(detection_results)  # This will display the results as formatted JSON
+                # Display as formatted JSON array (no `0:` prefix)
+                st.json(detection_results)
             else:
                 st.write("No sign language gestures detected.")
 
@@ -122,7 +123,7 @@ if option == "Upload Image":
 
                     if detection_results:
                         st.write("Detection Results:")
-                        st.json(detection_results)  # Show results in JSON format
+                        st.json(detection_results)  # Show results as formatted JSON
                     else:
                         st.write("No sign language gestures detected.")
                 else:
@@ -178,7 +179,7 @@ elif option == "Provide Image URL":
 
                         if detection_results:
                             st.write("Detection Results:")
-                            st.json(detection_results)  # Show results in JSON format
+                            st.json(detection_results)  # Show results as formatted JSON
                         else:
                             st.write("No sign language gestures detected.")
                 except Exception as e:
